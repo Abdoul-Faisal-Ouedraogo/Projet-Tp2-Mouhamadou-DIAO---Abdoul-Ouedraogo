@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Ma To-Do List Docker</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+        ul { list-style: none; padding: 0; }
+        li { background: #f4f4f4; margin: 5px 0; padding: 10px; border-radius: 4px; }
+        input { padding: 10px; width: 70%; }
+        button { padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Liste de Tâches</h1>
+    <div>
+        <input type="text" id="taskInput" placeholder="Nouvelle tâche...">
+        <button onclick="addTask()">Ajouter</button>
+    </div>
+    <ul id="taskList"></ul>
+
+    <script>
+        // L'URL pointe vers le backend interne via le proxy Nginx (voir conf plus bas)
+        // OU directement si on exposait le back, mais ici on respecte la consigne stricte
+        // On va tricher légèrement: le JS s'exécute dans le navigateur du client.
+        // Le client ne peut PAS accéder à "http://backend:5000".
+        // Il faut donc configurer Nginx (frontend) pour rediriger les requêtes API vers le backend
+        // OU exposer le backend sur un port différent mais la consigne [25] dit "non".
+        // SOLUTION : Nginx en Reverse Proxy.
+        
+        const API_URL = '/api/tasks'; 
+
+        async function loadTasks() {
+            const response = await fetch(API_URL);
+            const tasks = await response.json();
+            const list = document.getElementById('taskList');
+            list.innerHTML = '';
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.textContent = task.content;
+                list.appendChild(li);
+            });
+        }
+
+        async function addTask() {
+            const content = document.getElementById('taskInput').value;
+            if (!content) return;
+            await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content })
+            });
+            document.getElementById('taskInput').value = '';
+            loadTasks();
+        }
+
+        loadTasks();
+    </script>
+</body>
+</html>
