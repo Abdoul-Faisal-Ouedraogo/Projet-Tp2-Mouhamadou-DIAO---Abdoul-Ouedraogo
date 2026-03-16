@@ -1,0 +1,63 @@
+name: Pipeline CI/CD DevOps
+
+# Le pipeline se déclenche à chaque push sur la branche main
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # ----------------------------------------------------
+  # JOB 1 : Construction et publication des images Docker
+  # ----------------------------------------------------
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code source
+        uses: actions/checkout@v3
+
+      - name: Connexion à Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build et Push de l'image Backend
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/todo-backend:latest
+
+      - name: Build et Push de l'image Frontend
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/todo-frontend:latest
+
+  # ----------------------------------------------------
+  # JOB 2 : Déploiement sur le serveur de production
+  # ----------------------------------------------------
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push # Ce job attend que le Build soit terminé avec succès
+    steps:
+      - name: Déploiement sur le serveur via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            # 1. Aller dans le dossier du projet sur le serveur
+            cd /chemin/vers/ton/projet/sur/le/serveur
+            
+            # 2. Récupérer le dernier docker-compose.yaml
+            git pull origin main
+            
+            # 3. Télécharger les nouvelles images créées par le Job 1
+            docker-compose pull
+            
+            # 4. Redémarrer les services avec les nouvelles versions
+            docker-compose up -d
