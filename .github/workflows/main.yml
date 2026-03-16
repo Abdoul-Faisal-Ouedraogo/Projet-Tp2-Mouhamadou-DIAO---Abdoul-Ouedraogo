@@ -1,0 +1,83 @@
+name: Pipeline CI/CD DevOps
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  # ----------------------------------------------------
+  # ÉTAPE 1 : TESTS AUTOMATISÉS
+  # ----------------------------------------------------
+  test:
+    runs-on: ubuntu-latest # Le serveur prêté par GitHub
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v3
+
+      - name: Installation de Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Installation des dépendances et exécution des tests
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pytest test_app.py
+
+  # ----------------------------------------------------
+  # ÉTAPE 2 : CONSTRUCTION ET ENVOI SUR DOCKER HUB
+  # ----------------------------------------------------
+  build-and-push:
+    needs: test # Attend que les tests soient verts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupération du code
+        uses: actions/checkout@v3
+
+      - name: Connexion à Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Création et Envoi de l'Image Backend
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/todo-backend:latest
+
+      - name: Création et Envoi de l'Image Frontend
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/todo-frontend:latest
+
+  # ----------------------------------------------------
+  # ÉTAPE 3 : DÉPLOIEMENT SUR TON INSTANCE
+  # ----------------------------------------------------
+  deploy:
+    needs: build-and-push # Attend que les images soient créées
+    runs-on: ubuntu-latest
+    steps:
+      - name: Déploiement via SSH sur le serveur
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}         # IP du serveur (ex: 172.31.18.203, utiliser l'IP publique de préférence)
+          username: root                        # Ton utilisateur
+          password: ${{ secrets.VPS_PASSWORD }} # Le mot de passe de l'utilisateur root
+          script: |
+            # On va dans le bon dossier
+            cd /home/ubuntu/cicdoff
+            
+            # On met à jour les fichiers de configuration
+            git pull origin main
+            
+            # On télécharge les images toutes neuves
+            docker-compose pull
+            
+            # On relance l'application
+            docker-compose up -d
