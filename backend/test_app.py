@@ -6,5 +6,7 @@ def test_app_exists():
     assert app is not None
 
 def test_cors_enabled():
-    """Vérifie que les CORS sont bien activés pour le frontend."""
-    assert 'cors' in app.extensions
+    """Vérifie que les CORS sont bien activés."""
+    client = app.test_client()
+    response = client.get('/tasks')
+    assert response.headers.get('Access-Control-Allow-Origin') == '*'
