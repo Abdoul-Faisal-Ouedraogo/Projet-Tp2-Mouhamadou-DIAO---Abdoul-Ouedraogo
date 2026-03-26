@@ -66,18 +66,22 @@ jobs:
       - name: Déploiement via SSH sur le serveur
         uses: appleboy/ssh-action@master
         with:
-          host: ${{ secrets.VPS_HOST }}         # IP du serveur (ex: 172.31.18.203, utiliser l'IP publique de préférence)
-          username: root                        # Ton utilisateur
-          password: ${{ secrets.VPS_PASSWORD }} # Le mot de passe de l'utilisateur root
+          host: ${{ secrets.EC2_HOST }}         # IP du serveur (ex: 172.31.18.203, utiliser l'IP publique de préférence)
+          username: ${{ secrets.EC2_USER }}                        # Ton utilisateur
+          password: ${{ secrets.EC2_SSH_KEY }} # Le mot de passe de l'utilisateur root
           script: |
+            docker pull ${{ secrets.DOCKER_USERNAME }}/my-node-app:latest
+            docker stop myapp || true && docker rm myapp || true
+            docker run -d --name myapp -p 3000:3000 ${{ secrets.DOCKER_USERNAME }}/my-node-app:latest
+
             # On va dans le bon dossier
-            cd /home/ubuntu/cicdoff
+            # cd /home/ubuntu/cicdoff
             
             # On met à jour les fichiers de configuration
-            git pull origin main
+            # git pull origin main
             
             # On télécharge les images toutes neuves
-            docker-compose pull
+            # docker-compose pull
             
             # On relance l'application
-            docker-compose up -d
+            # docker-compose up -d
