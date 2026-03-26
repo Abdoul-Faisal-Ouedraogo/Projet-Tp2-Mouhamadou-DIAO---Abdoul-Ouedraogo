@@ -68,7 +68,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}         # IP du serveur (ex: 172.31.18.203, utiliser l'IP publique de préférence)
           username: ${{ secrets.EC2_USER }}                        # Ton utilisateur
-          password: ${{ secrets.EC2_SSH_KEY }} # Le mot de passe de l'utilisateur root
+          key: ${{ secrets.EC2_SSH_KEY }} # Le mot de passe de l'utilisateur root
           script: |
             docker pull ${{ secrets.DOCKER_USERNAME }}/my-node-app:latest
             docker stop myapp || true && docker rm myapp || true
