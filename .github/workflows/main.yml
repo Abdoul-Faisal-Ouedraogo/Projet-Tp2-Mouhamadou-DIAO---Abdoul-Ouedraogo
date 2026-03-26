@@ -63,17 +63,18 @@ jobs:
     needs: build-and-push # Attend que les images soient créées
     runs-on: ubuntu-latest
     steps:
-      - name: Déploiement via SSH sur le serveur
+      - name: Déploiement via SSH sur EC2
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.EC2_HOST }}         # IP du serveur (ex: 172.31.18.203, utiliser l'IP publique de préférence)
-          username: ${{ secrets.EC2_USER }}                        # Ton utilisateur
+          username: ubuntu                        # Ton utilisateur
           key: ${{ secrets.EC2_SSH_KEY }} # Le mot de passe de l'utilisateur root
           script: |
-            docker pull ${{ secrets.DOCKER_USERNAME }}/my-node-app:latest
-            docker stop myapp || true && docker rm myapp || true
-            docker run -d --name myapp -p 3000:3000 ${{ secrets.DOCKER_USERNAME }}/my-node-app:latest
-
+            docker pull ${{ secrets.DOCKER_USERNAME }}/todo-backend:latest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/todo-frontend:latest
+            docker-compose -f /home/ubuntu/cicdoff/docker-compose.yaml pull
+            docker-compose -f /home/ubuntu/cicdoff/docker-compose.yaml up -d
+            
             # On va dans le bon dossier
             # cd /home/ubuntu/cicdoff
             
